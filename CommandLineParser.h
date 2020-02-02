@@ -1,5 +1,3 @@
-#include <utility>
-
 //
 // Created by Jean-Blas IMBERT on 2020-01-31.
 //
@@ -14,11 +12,10 @@
 #include <iomanip>
 #include <algorithm>
 
-using namespace std;
-
 // Enumerate the possible types for options in the command line
 enum class CLTYPE {
-    INT, FLOAT, BOOL, STRING, QUOTED
+    INT, FLOAT, BOOL, STRING, QUOTED,
+    NONE // NONE => used when there is no value after the option (e.g. -h)
 };
 
 // Used to map the enum into string for printing
@@ -27,15 +24,18 @@ std::map<CLTYPE, std::string> CLTYPEtoStr{
         {CLTYPE::FLOAT,  "float"},
         {CLTYPE::BOOL,   "boolean"},
         {CLTYPE::QUOTED, "quoted_string"},
-        {CLTYPE::STRING, "string"}};
+        {CLTYPE::STRING, "string"},
+        {CLTYPE::NONE,   ""}};
 
 // Define and represents a Command Line Argument (or option) without any value
 class CLArgBase {
 public:
-    explicit CLArgBase(char opt = ' ', std::string longOpt = "", CLTYPE clt = CLTYPE::STRING, bool ismandatory = false, std::string docum = "") :
-            option(opt), longOption(std::move(longOpt)), cltype(clt), mandatory(ismandatory), doc(std::move(docum)) {};
+    explicit CLArgBase(std::string opt = "", std::string longOpt = "", CLTYPE clt = CLTYPE::STRING,
+                       bool ismandatory = false, std::string docum = "") :
+            option(std::move(opt)), longOption(std::move(longOpt)), cltype(clt), mandatory(ismandatory),
+            doc(std::move(docum)) {};
 
-    char getOption() const { return option; }
+    std::string getOption() const { return option; }
 
     std::string getLongOption() const { return longOption; }
 
@@ -46,18 +46,21 @@ public:
     bool isMandatory() const { return mandatory; }
 
 private:
-    char option; // e.g. -t
-    std::string longOption; // e.g. --test
-    CLTYPE cltype; // e.g. bool
-    std::string doc; // documentation
-    bool mandatory; // is this option mandatory or optional?
+    std::string option;      // mandatory field (e.g. -t)
+    std::string longOption;  // e.g. --test
+    CLTYPE cltype;           // type of option
+    std::string doc;         // documentation
+    bool mandatory;          // is this option mandatory or optional?
 };
 
 // Add a value to the command line option
 template<typename T>
 class CLArg : public CLArgBase {
 public:
-    explicit CLArg(char opt = ' ', const std::string& longOpt = "", CLTYPE clt = CLTYPE::STRING, bool ismandatory = false, std::string docum = "") :
+    class Builder; // construct the CLArg using the Builder pattern
+
+    explicit CLArg(const std::string &opt = "", const std::string &longOpt = "", CLTYPE clt = CLTYPE::STRING,
+                   bool ismandatory = false, const std::string &docum = "") :
             CLArgBase(opt, longOpt, clt, ismandatory, docum) {};
 
     T getValue() const { return value; }
@@ -65,37 +68,88 @@ public:
     void setValue(T t) { value = t; }
 
 private:
-    T value; // e.g. false
+    T value;
 };
 
-bool compLongOptionSize(const CLArgBase& a, const CLArgBase& b) {
+// Construct a CLArg using the Builder pattern
+template<typename T>
+class CLArg<T>::Builder {
+public:
+    Builder &setOpt(const std::string &s) {
+        option = s;
+        return *this;
+    }
+
+    Builder &setLongOpt(const std::string &s) {
+        longOption = s;
+        return *this;
+    }
+
+    Builder &setCltype(CLTYPE t) {
+        cltype = t;
+        return *this;
+    }
+
+    Builder &isMandatory() {
+        mandatory = true;
+        return *this;
+    }
+
+    Builder &setDoc(const std::string &s) {
+        doc = s;
+        return *this;
+    }
+
+    CLArg<T> build() const { return CLArg<T>{option, longOption, cltype, mandatory, doc}; }
+
+private:
+    std::string option{}; // e.g. -t
+    std::string longOption{""}; // e.g. --toto
+    CLTYPE cltype{CLTYPE::NONE};
+    std::string doc{""}; // documentation string
+    bool mandatory{false}; // is this option mandatory or optional?
+};
+
+bool compOptionSize(const CLArgBase &a, const CLArgBase &b) {
+    return a.getOption().size() < b.getOption().size();
+}
+
+bool compLongOptionSize(const CLArgBase &a, const CLArgBase &b) {
     return a.getLongOption().size() < b.getLongOption().size();
 }
 
-bool compTypeSize(const CLArgBase& a, const CLArgBase& b) {
+bool compTypeSize(const CLArgBase &a, const CLArgBase &b) {
     return CLTYPEtoStr[a.getType()].size() < CLTYPEtoStr[b.getType()].size();
 }
 
-
 // Display the available command line arguments in a nice format
-string usage(const vector<CLArgBase>& options) {
+std::string usage(const std::vector<CLArgBase> &options) {
     auto maxSizeLongOption{max_element(options.cbegin(), options.cend(), compLongOptionSize)};
+    auto maxSizeOption{max_element(options.cbegin(), options.cend(), compOptionSize)};
     auto maxSizeType{max_element(options.cbegin(), options.cend(), compTypeSize)};
-    ostringstream os;
-    for (const CLArgBase& o : options)
-        os << "-" << o.getOption()
-           << ", --" << setw(maxSizeLongOption->getLongOption().size() + 1) << left << o.getLongOption()
+    std::ostringstream os;
+    for (const CLArgBase &o : options) { // Display the full command line with all options
+        os << "[";
+        if (!o.getOption().empty()) os << o.getOption();
+        if (!o.getOption().empty() && !o.getLongOption().empty()) os << " | ";
+        if (!o.getLongOption().empty()) os << o.getLongOption();
+        os << "] ";
+    }
+    os << "\nwhere:\n";
+    for (const CLArgBase &o : options) // Display each option with its details
+        os << "\t" << std::setw(maxSizeOption->getOption().size() + 1) << std::left << o.getOption()
+           << ", " << std::setw(maxSizeLongOption->getLongOption().size() + 1) << std::left << o.getLongOption()
            << (o.isMandatory() ? " [M] " : " [O] ")
-           << setw(CLTYPEtoStr[maxSizeType->getType()].size() + 1) << left << CLTYPEtoStr[o.getType()]
-           << o.getDoc() << endl;
+           << std::setw(CLTYPEtoStr[maxSizeType->getType()].size() + 1) << std::left << CLTYPEtoStr[o.getType()]
+           << o.getDoc() << std::endl;
     return os.str();
 }
 
 // Split the string "s" at the "delim" bounds and return the tokens into a vector
-vector<string> split(const string &s, char delim) {
-    stringstream ss(s);
-    string item;
-    vector<string> elems;
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::stringstream ss(s);
+    std::string item;
+    std::vector<std::string> elems;
     while (getline(ss, item, delim)) {
         elems.push_back(move(item));
     }
