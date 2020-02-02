@@ -29,7 +29,10 @@ int main() {
 
     vector<CLArgBase> v{clTest, clHelp, clBoolF, clBoolT, clFloat, clInt, clQuoted};
     cout << usage(v);
-    // TODO : parse command line into an array of CLArg 
+
+    // TODO : add a type NONE (e.g. -h)
+    // TODO : parse command line into an array of CLArg
+
 
     return EXIT_SUCCESS;
 }
