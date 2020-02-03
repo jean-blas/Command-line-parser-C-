@@ -12,7 +12,7 @@ include_directories(. ${GTEST_INCLUDE_DIRS})
 add_executable(parser Command_line_parser_C_
         CommandLineParser.cpp
         CommandLineParser.h
-        CLUtils.h)
+        CLUtils.h CLParser.h)
 
 add_executable(runTests UnitTests.h UnitTests.cpp)
 
