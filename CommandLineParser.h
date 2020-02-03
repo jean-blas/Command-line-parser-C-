@@ -103,7 +103,7 @@ public:
     CLArg<T> build() const { return CLArg<T>{option, longOption, cltype, mandatory, doc}; }
 
 private:
-    std::string option{}; // e.g. -t
+    std::string option{""}; // e.g. -t
     std::string longOption{""}; // e.g. --toto
     CLTYPE cltype{CLTYPE::NONE};
     std::string doc{""}; // documentation string
@@ -143,17 +143,6 @@ std::string usage(const std::vector<CLArgBase> &options) {
            << std::setw(CLTYPEtoStr[maxSizeType->getType()].size() + 1) << std::left << CLTYPEtoStr[o.getType()]
            << o.getDoc() << std::endl;
     return os.str();
-}
-
-// Split the string "s" at the "delim" bounds and return the tokens into a vector
-std::vector<std::string> split(const std::string &s, char delim) {
-    std::stringstream ss(s);
-    std::string item;
-    std::vector<std::string> elems;
-    while (getline(ss, item, delim)) {
-        elems.push_back(move(item));
-    }
-    return elems;
 }
 
 #endif //DIVERSCPP_COMMANDLINEPARSER_H

@@ -3,6 +3,7 @@
 //
 
 #include "CommandLineParser.h"
+#include "CLUtils.h"
 #include <string>
 #include <iostream>
 
