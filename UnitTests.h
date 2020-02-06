@@ -49,6 +49,57 @@ TEST(UtilsTest, split) {
   EXPECT_EQ("++ccc", v[2]);
 }
 
+TEST(UtilsTest, contains) {
+  std::vector<std::string> v = split("a -bb ++ccc ", ' ');
+  EXPECT_TRUE(contains<string>("a", v));
+  EXPECT_FALSE(contains<string>("b", v));
+
+  CLArg<string> arg1 = CLArg<string>::Builder{}.setOpt("-a").setLongOpt("--aaa").build();
+  CLArg<string> arg2 = CLArg<string>::Builder{}.setOpt("-b").setLongOpt("--bbb").build();
+  CLArg<string> arg3 = CLArg<string>::Builder{}.setOpt("-c").setLongOpt("--ccc").build();
+  std::vector<CLArgBase> v1{arg1, arg2, arg3};
+  EXPECT_TRUE(contains<CLArgBase>(arg1, v1));
+  CLArg<string> arg4 = CLArg<string>::Builder{}.setOpt("-d").setLongOpt("--ddd").build();
+  EXPECT_FALSE(contains<CLArgBase>(arg4, v1));
+}
+
+TEST(UtilsTest, locate) {
+  CLArg<string> arg1 = CLArg<string>::Builder{}.setOpt("-a").setLongOpt("--aaa").build();
+  CLArg<string> arg2 = CLArg<string>::Builder{}.setOpt("-b").setLongOpt("--bbb").build();
+  CLArg<string> arg3 = CLArg<string>::Builder{}.setOpt("-c").setLongOpt("--ccc").build();
+  std::vector<CLArgBase> v{arg1, arg2, arg3};
+  // Test the short option field
+  auto loc = locate<string, CLArgBase>("-b", v, [](const CLArgBase& arg) { return arg.getOption(); });
+  ASSERT_TRUE(loc != v.cend());
+  EXPECT_EQ(arg2, *loc);
+  loc = locate<string, CLArgBase>("-e", v, [](const CLArgBase& arg) { return arg.getOption(); });
+  EXPECT_TRUE(loc == v.cend());
+  // Test the long option field
+  loc = locate<string, CLArgBase>("--bbb", v, [](const CLArgBase& arg) { return arg.getLongOption(); });
+  ASSERT_TRUE(loc != v.cend());
+  EXPECT_EQ(arg2, *loc);
+  loc = locate<string, CLArgBase>("--eee", v, [](const CLArgBase& arg) { return arg.getLongOption(); });
+  EXPECT_TRUE(loc == v.cend());
+}
+
+TEST(UtilsTest, locateOR) {
+  CLArg<string> arg1 = CLArg<string>::Builder{}.setOpt("-a").setLongOpt("--aaa").build();
+  CLArg<string> arg2 = CLArg<string>::Builder{}.setOpt("-b").setLongOpt("--bbb").build();
+  CLArg<string> arg3 = CLArg<string>::Builder{}.setOpt("-c").setLongOpt("--ccc").build();
+  std::vector<CLArgBase> v{arg1, arg2, arg3};
+  vector<string> o1{"-a", "--aaa"};
+  auto loc = locateOR<string, CLArgBase, vector<string>::iterator>(o1.begin(), o1.end(), v, [](const CLArgBase &arg) {
+    return arg.getOption();
+  });
+  ASSERT_TRUE(loc != v.cend());
+  EXPECT_EQ(arg1, *loc);
+  vector<string> o2{"-e", "--eee"};
+  loc = locateOR<string, CLArgBase, vector<string>::iterator>(o2.begin(), o2.end(), v, [](const CLArgBase &arg) {
+    return arg.getOption();
+  });
+  EXPECT_TRUE(loc == v.cend());
+}
+
 TEST(builderTest, simple) {
   CLArg<string> clBuild =
       CLArg<string>::Builder{}.setCltype(CLTYPE::STRING).setOpt("-a").setLongOpt("--aaa").isMandatory().setDoc("Documentation of option a").build();

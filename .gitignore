@@ -1,2 +1,4 @@
 .idea/
 cmake-build-debug/
+/.metadata/
+eclipse_clp/

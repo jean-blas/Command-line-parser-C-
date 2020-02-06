@@ -52,6 +52,14 @@ public:
     return mandatory;
   }
 
+  void setPresent() {
+    present = true;
+  }
+
+  bool isPresent() const { // true if the option is defined, false otherwise
+    return present;
+  }
+
   friend bool operator==(const CLArgBase &lhs, const CLArgBase &rhs);
 
   friend bool operator!=(const CLArgBase &lhs, const CLArgBase &rhs);
@@ -62,6 +70,7 @@ private:
   CLTYPE cltype;           // type of option
   std::string doc;         // documentation
   bool mandatory;          // is this option mandatory or optional?
+  bool present{false};
 };
 
 bool operator==(const CLArgBase &lhs, const CLArgBase &rhs) {
@@ -87,16 +96,12 @@ public:
 
   void setValue(T t) {
     value = t;
-    present = true;
+    setPresent();
   }
 
-  bool isPresent() const { // true if the option is defined, false otherwise
-    return present;
-  }
 
 private:
   T value;
-  bool present{false};
 };
 
 // Construct a CLArg using the Builder pattern
