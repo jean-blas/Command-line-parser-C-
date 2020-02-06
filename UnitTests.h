@@ -82,22 +82,59 @@ TEST(UtilsTest, locate) {
   EXPECT_TRUE(loc == v.cend());
 }
 
-TEST(UtilsTest, locateOR) {
-  CLArg<string> arg1 = CLArg<string>::Builder{}.setOpt("-a").setLongOpt("--aaa").build();
-  CLArg<string> arg2 = CLArg<string>::Builder{}.setOpt("-b").setLongOpt("--bbb").build();
-  CLArg<string> arg3 = CLArg<string>::Builder{}.setOpt("-c").setLongOpt("--ccc").build();
-  std::vector<CLArgBase> v{arg1, arg2, arg3};
-  vector<string> o1{"-a", "--aaa"};
-  auto loc = locateOR<string, CLArgBase, vector<string>::iterator>(o1.begin(), o1.end(), v, [](const CLArgBase &arg) {
-    return arg.getOption();
-  });
-  ASSERT_TRUE(loc != v.cend());
-  EXPECT_EQ(arg1, *loc);
-  vector<string> o2{"-e", "--eee"};
-  loc = locateOR<string, CLArgBase, vector<string>::iterator>(o2.begin(), o2.end(), v, [](const CLArgBase &arg) {
-    return arg.getOption();
-  });
-  EXPECT_TRUE(loc == v.cend());
+//TEST(UtilsTest, locateOR) {
+//  CLArg<string> arg1 = CLArg<string>::Builder{}.setOpt("-a").setLongOpt("--aaa").build();
+//  CLArg<string> arg2 = CLArg<string>::Builder{}.setOpt("-b").setLongOpt("--bbb").build();
+//  CLArg<string> arg3 = CLArg<string>::Builder{}.setOpt("-c").setLongOpt("--ccc").build();
+//  std::vector<CLArgBase> v{arg1, arg2, arg3};
+//  vector<string> o1{"-a", "--aaa"};
+//  auto loc = locateOR<string, CLArgBase, vector<string>::iterator>(o1.begin(), o1.end(), v, [](const CLArgBase &arg) {
+//    return arg.getOption();
+//  });
+//  ASSERT_TRUE(loc != v.cend());
+//  EXPECT_EQ(arg1, *loc);
+//  vector<string> o2{"-e", "--eee"};
+//  loc = locateOR<string, CLArgBase, vector<string>::iterator>(o2.begin(), o2.end(), v, [](const CLArgBase &arg) {
+//    return arg.getOption();
+//  });
+//  EXPECT_TRUE(loc == v.cend());
+//}
+
+TEST(UtilsTest, filloptions) {
+	// Test string
+	CLArg<string> args = CLArg<string>::Builder{}.setCltype(CLTYPE::STRING).build();
+	bool b = fillOption("value1", args);
+	EXPECT_TRUE(b);
+	EXPECT_EQ("value1", args.getValue());
+	EXPECT_TRUE(args.isPresent());
+	// Test int
+	CLArg<int> argi = CLArg<int>::Builder{}.setCltype(CLTYPE::INT).build();
+	b = fillOption("5", argi);
+	EXPECT_TRUE(b);
+	EXPECT_EQ(5, argi.getValue());
+	EXPECT_TRUE(argi.isPresent());
+	// Test float
+	CLArg<float> argf = CLArg<float>::Builder{}.setCltype(CLTYPE::FLOAT).build();
+	b = fillOption("3.14", argf);
+	EXPECT_TRUE(b);
+	EXPECT_FLOAT_EQ(3.14, argf.getValue());
+	EXPECT_TRUE(argf.isPresent());
+	// Test bool
+	CLArg<bool> argb = CLArg<bool>::Builder{}.setCltype(CLTYPE::BOOL).build();
+	b = fillOption("true", argb);
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(argb.getValue());
+	EXPECT_TRUE(argb.isPresent());
+	b = fillOption("false", argb);
+	EXPECT_TRUE(b);
+	EXPECT_FALSE(argb.getValue());
+	EXPECT_TRUE(argb.isPresent());
+    // Test quoted
+	CLArg<string> argq = CLArg<string>::Builder{}.setCltype(CLTYPE::STRING).build();
+	b = fillOption("value1 quoted", argq);
+	EXPECT_TRUE(b);
+	EXPECT_EQ("value1 quoted", argq.getValue());
+	EXPECT_TRUE(argq.isPresent());
 }
 
 TEST(builderTest, simple) {

@@ -9,6 +9,7 @@
 #include <vector>
 #include <functional>
 #include <array>
+#include <iomanip>
 
 // Split the string "s" at the "delim" bounds and return the tokens into a vector
 std::vector<std::string> split(const std::string &s, char delim) {
@@ -27,6 +28,7 @@ template<typename T> bool contains(const T &arg, const std::vector<T> &v) {
   return it != v.cend();
 }
 
+
 /* Locate the first occurrence of item with field defined by getField with value o
    @param o : TField value to target
    @param v : vector of items that have a field of type TField
@@ -41,6 +43,17 @@ template<typename TField, typename TItem> auto locate(const TField o, const std:
   // locate first occurrence of item with o field in v
   auto location = find_if(v.cbegin(), v.cend(), lambda);
   return location;
+}
+
+/* Locate the first occurrence of item with field defined by getField with value o
+   @param o : T value to target
+   @param v : vector of items that have a field of type T
+
+   Typically here, T = std::string
+*/
+template<typename T> auto locate(const T &o, const std::vector<T> &v) {
+  // locate first occurrence of o in v
+  return std::find(v.cbegin(), v.cend(), o);
 }
 
 /* Locate the first occurrence of item with field defined by getField with values in iterators
@@ -63,40 +76,43 @@ auto locateOR(ITER first, const ITER last, const std::vector<TItem> &v, std::fun
   return location;
 }
 
-bool to+
-
-bool fillOption(const std::string &value, CLArgBase *arg) {
-  switch (arg->getType()) {
+// Fill a CLArg value based on its type with the given parameter
+bool fillOption(const std::string &value, CLArgBase &arg) {
+  switch (arg.getType()) {
     case CLTYPE::STRING : {
-      //      CLArg<std::string> *sarg = dynamic_cast<CLArg<std::string> *>(arg);
-      auto *parg = (CLArg<std::string> *) (arg);
+      auto *parg = (CLArg<std::string> *) (&arg);
       parg->setValue(value);
       break;
     }
     case CLTYPE::BOOL : {
-      auto *parg = (CLArg<bool> *) (arg);
-      parg->setValue(str(value));
+      auto *parg = (CLArg<bool> *) (&arg);
+      if (value == "false")
+        parg->setValue(false);
+      else if (value == "true")
+    	parg->setValue(true);
       break;
     }
     case CLTYPE::FLOAT : {
-      auto *parg = (CLArg<float> *) (arg);
-      parg->setValue(static_cast<float>value);
+      auto *parg = (CLArg<float> *) (&arg);
+      parg->setValue(std::stof(value));
       break;
     }
     case CLTYPE::INT : {
-      auto *parg = (CLArg<float> *) (arg);
-      parg->setValue(static_cast<float>value);
+      auto *parg = (CLArg<int> *) (&arg);
+      parg->setValue(std::stoi(value));
       break;
     }
     case CLTYPE::QUOTED : {
-      auto *parg = (CLArg<float> *) (arg);
-      parg->setValue(static_cast<float>value);
+      auto *parg = (CLArg<std::string> *) (&arg);
+      std::stringstream ss;
+      ss << std::quoted(value);
+      parg->setValue(ss.str());
       break;
     }
-      break;
     default:
       return false;
   }
+  return true;
 }
 
 #endif //COMMAND_LINE_PARSER_C__CLUTILS_H

@@ -11,6 +11,7 @@
 #include <vector>
 #include <iomanip>
 #include <algorithm>
+#include <iostream>
 
 // Enumerate the possible types for options in the command line
 enum class CLTYPE {
@@ -31,6 +32,9 @@ public:
   explicit CLArgBase(std::string opt = "", std::string longOpt = "", CLTYPE clt = CLTYPE::STRING, bool ismandatory = false, std::string docum = "")
       : option(std::move(opt)), longOption(std::move(longOpt)), cltype(clt), mandatory(ismandatory), doc(std::move(docum)) {
   };
+
+  // Ensures that a custom derived-class destructor will be invoked when a derived-class object is deleted via bas-class pointer
+  virtual ~CLArgBase() = default;
 
   std::string getOption() const {
     return option;
@@ -60,6 +64,8 @@ public:
     return present;
   }
 
+  virtual std::string to_string() const;
+
   friend bool operator==(const CLArgBase &lhs, const CLArgBase &rhs);
 
   friend bool operator!=(const CLArgBase &lhs, const CLArgBase &rhs);
@@ -72,6 +78,14 @@ private:
   bool mandatory;          // is this option mandatory or optional?
   bool present{false};
 };
+
+std::string CLArgBase::to_string() const {
+	std::ostringstream os;
+	os << "option=" << option << " longOption=" << longOption << " cltype = " <<
+			CLTYPEtoStr[cltype] << " mandatory=" << std::boolalpha << mandatory <<
+			" present=" << std::boolalpha << present;
+	return os.str();
+}
 
 bool operator==(const CLArgBase &lhs, const CLArgBase &rhs) {
   return lhs.option == rhs.option && lhs.longOption == rhs.longOption;
@@ -95,10 +109,15 @@ public:
   }
 
   void setValue(T t) {
-    value = t;
+	value = t;
     setPresent();
   }
 
+  virtual std::string to_string() const override {
+	  std::ostringstream os;
+	  os << CLArgBase::to_string() << " value=" << value;
+	  return os.str();
+  }
 
 private:
   T value;
@@ -136,6 +155,8 @@ public:
     return CLArg<T>{option, longOption, cltype, mandatory, doc};
   }
 
+
+
 private:
   std::string option{""}; // e.g. -t
   std::string longOption{""}; // e.g. --toto
@@ -158,11 +179,14 @@ bool compTypeSize(const CLArgBase &a, const CLArgBase &b) {
 
 // Display the available command line arguments in a nice format
 std::string usage(const std::vector<CLArgBase> &options) {
-  auto maxSizeLongOption{max_element(options.cbegin(), options.cend(), compLongOptionSize)};
-  auto maxSizeOption{max_element(options.cbegin(), options.cend(), compOptionSize)};
-  auto maxSizeType{max_element(options.cbegin(), options.cend(), compTypeSize)};
+  auto maxSizeLongOption = max_element(options.cbegin(), options.cend(), compLongOptionSize);
+  auto maxLongOpt = (*maxSizeLongOption).getOption().size() + 1;
+  auto maxSizeOption = max_element(options.cbegin(), options.cend(), compOptionSize);
+  auto maxOpt = (*maxSizeOption).getLongOption().size() + 1;
+  auto maxSizeType = max_element(options.cbegin(), options.cend(), compTypeSize);
+  auto maxTyp = CLTYPEtoStr[(*maxSizeType).getType()].size() + 1;
   std::ostringstream os;
-  for (const CLArgBase &o : options) { // Display the full command line with all options
+  for (const CLArgBase o : options) { // Display the full command line with all options
     os << "[";
     if (!o.getOption().empty())
       os << o.getOption();
@@ -173,10 +197,10 @@ std::string usage(const std::vector<CLArgBase> &options) {
     os << "] ";
   }
   os << "\nwhere:\n";
-  for (const CLArgBase &o : options) // Display each option with its details
-    os << "\t" << std::setw(maxSizeOption->getOption().size() + 1) << std::left << o.getOption() << ", "
-       << std::setw(maxSizeLongOption->getLongOption().size() + 1) << std::left << o.getLongOption() << (o.isMandatory() ? " [M] " : " [O] ")
-       << std::setw(CLTYPEtoStr[maxSizeType->getType()].size() + 1) << std::left << CLTYPEtoStr[o.getType()] << o.getDoc() << std::endl;
+  for (const CLArgBase o : options) // Display each option with its details
+    os << "\t" << std::setw(maxOpt) << std::left << o.getOption() << ", "
+       << std::setw(maxLongOpt) << std::left << o.getLongOption() << (o.isMandatory() ? " [M] " : " [O] ")
+       << std::setw(maxTyp) << std::left << CLTYPEtoStr[o.getType()] << o.getDoc() << std::endl;
   return os.str();
 }
 

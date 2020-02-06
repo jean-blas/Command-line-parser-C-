@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 3.14)
-project(Command_line_parser_C_)
+cmake_minimum_required(VERSION 2.6)
+#project(Command_line_parser_C_)
+project(eclipse_clp)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -9,7 +10,7 @@ find_package(GTest REQUIRED)
 
 include_directories(. ${GTEST_INCLUDE_DIRS})
 
-add_executable(parser Command_line_parser_C_
+add_executable(parser 
         CommandLineParser.cpp
         CommandLineParser.h
         CLUtils.h CLParser.h)
