@@ -11,6 +11,17 @@
 #include <array>
 #include <iomanip>
 
+// Split the string "s" with quotes inside and return the tokens into a vector
+std::vector<std::string> split(const std::string &s) {
+	std::istringstream iss(s);
+	std::string item;
+	std::vector<std::string> elems;
+	while (iss >> std::quoted(item)) {
+		elems.push_back(move(item));
+	}
+	return elems;
+}
+
 // Split the string "s" at the "delim" bounds and return the tokens into a vector
 std::vector<std::string> split(const std::string &s, char delim) {
 	std::stringstream ss(s);
@@ -86,6 +97,7 @@ auto locateOR(ITER first, const ITER last, const std::vector<TItem> &v, std::fun
 
 // Fill a CLArg value based on its type with the given parameter
 bool fillOption(const std::string &value, CLArgBase *arg) {
+	bool res = true;
 	switch (arg->getType()) {
 	case CLTYPE::STRING: {
 		auto *parg = (CLArg<std::string>*) (arg);
@@ -98,16 +110,26 @@ bool fillOption(const std::string &value, CLArgBase *arg) {
 			parg->setValue(false);
 		else if (value == "true")
 			parg->setValue(true);
+		else
+			res = false;
 		break;
 	}
 	case CLTYPE::FLOAT: {
 		auto *parg = (CLArg<float>*) (arg);
-		parg->setValue(std::stof(value));
+		try {
+			parg->setValue(std::stof(value));
+		} catch (...) {
+			res = false;
+		}
 		break;
 	}
 	case CLTYPE::INT: {
 		auto *parg = (CLArg<int>*) (arg);
-		parg->setValue(std::stoi(value));
+		try {
+			parg->setValue(std::stoi(value));
+		} catch (...) {
+			res = false;
+		}
 		break;
 	}
 	case CLTYPE::QUOTED: {
@@ -118,9 +140,9 @@ bool fillOption(const std::string &value, CLArgBase *arg) {
 		break;
 	}
 	default:
-		return false;
+		res = false;
 	}
-	return true;
+	return res;
 }
 
 #endif //COMMAND_LINE_PARSER_C__CLUTILS_H

@@ -50,6 +50,15 @@ TEST(UtilsTest, split) {
 	EXPECT_EQ("++ccc", v[2]);
 }
 
+TEST(UtilsTest, split_quoted) {
+	std::vector<std::string> v = split("a -bb ++ccc \"a quoted string\"");
+	ASSERT_EQ(4, v.size());
+	EXPECT_EQ("a", v[0]);
+	EXPECT_EQ("-bb", v[1]);
+	EXPECT_EQ("++ccc", v[2]);
+	EXPECT_EQ("a quoted string", v[3]);
+}
+
 TEST(UtilsTest, contains) {
 	std::vector<std::string> v = split("a -bb ++ccc ", ' ');
 	EXPECT_TRUE(contains<string>("a", v));
@@ -193,6 +202,148 @@ TEST(CLParser, add) {
 	CLArg<string> arg3 = CLArg<string>::Builder { }.setOpt("-a").setLongOpt("--aaa").build();
 	parser.add(&arg1).add(&arg2).add(&arg3);
 	EXPECT_EQ(2, parser.getOptions().size());
+}
+
+TEST(CLParser, parse_opt_string) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::STRING).build();
+	parser.addSafe(&arg1);
+	string line { "-a AAA" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+	EXPECT_EQ("AAA", arg1.getValue());
+}
+
+TEST(CLParser, parse_longopt_string) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setLongOpt("-aaa").setCltype(CLTYPE::STRING).build();
+	parser.addSafe(&arg1);
+	string line { "-aaa AAA" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+	EXPECT_EQ("AAA", arg1.getValue());
+}
+
+TEST(CLParser, parse_opt_bool) {
+	CLParser parser;
+	CLArg<bool> arg1 = CLArg<bool>::Builder { }.setOpt("-a").setCltype(CLTYPE::BOOL).build();
+	parser.addSafe(&arg1);
+	string line { "-a true" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+	EXPECT_EQ(1, arg1.getValue());
+}
+
+TEST(CLParser, parse_opt_float) {
+	CLParser parser;
+	CLArg<float> arg1 = CLArg<float>::Builder { }.setOpt("-a").setCltype(CLTYPE::FLOAT).build();
+	parser.addSafe(&arg1);
+	string line { "-a 3.14" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+	EXPECT_FLOAT_EQ(3.14, arg1.getValue());
+}
+
+TEST(CLParser, parse_opt_int) {
+	CLParser parser;
+	CLArg<int> arg1 = CLArg<int>::Builder { }.setOpt("-a").setCltype(CLTYPE::INT).build();
+	parser.addSafe(&arg1);
+	string line { "-a 70" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+	EXPECT_EQ(70, arg1.getValue());
+}
+
+TEST(CLParser, parse_opt_none) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::NONE).build();
+	parser.addSafe(&arg1);
+	string line { "-a" };
+	bool b { parser.parse(line) };
+	EXPECT_TRUE(b);
+	EXPECT_TRUE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_no_value) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::STRING).build();
+	parser.addSafe(&arg1);
+	string line { "-a" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_mandatory) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").isMandatory().build();
+	parser.addSafe(&arg1);
+	string line { "-b" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_value_is_opt) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::STRING).build();
+	parser.addSafe(&arg1);
+	string line { "-a -a" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+	CLArg<string> arg2 = CLArg<string>::Builder { }.setOpt("-b").setCltype(CLTYPE::NONE).build();
+	parser.addSafe(&arg2);
+	string line2 { "-a -b" };
+	bool b2 { parser.parse(line) };
+	EXPECT_FALSE(b2);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_value_is_longopt) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::STRING).build();
+	CLArg<string> arg2 = CLArg<string>::Builder { }.setLongOpt("-bbb").setCltype(CLTYPE::NONE).build();
+	parser.add(&arg1).add(&arg2);
+	string line { "-a -bbb" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_int) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::INT).build();
+	parser.add(&arg1);
+	string line { "-a dummy" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_float) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::FLOAT).build();
+	parser.add(&arg1);
+	string line { "-a dummy" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
+}
+
+TEST(CLParser, parse_err_bool) {
+	CLParser parser;
+	CLArg<string> arg1 = CLArg<string>::Builder { }.setOpt("-a").setCltype(CLTYPE::BOOL).build();
+	parser.add(&arg1);
+	string line { "-a dummy" };
+	bool b { parser.parse(line) };
+	EXPECT_FALSE(b);
+	EXPECT_FALSE(arg1.isPresent());
 }
 
 #endif //COMMAND_LINE_PARSER_C__UNITTESTS_H

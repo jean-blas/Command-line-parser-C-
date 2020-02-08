@@ -47,7 +47,7 @@ bool CLParser::parse(const std::string &line) const {
 	if (!check())
 		return false; // Check that the options are well defined, etc.
 
-	std::vector<std::string> tokens = split(line, ' ');
+	std::vector<std::string> tokens = split(line);
 
 	// 1. if -h or --help then show usage() and exit
 	bool help = contains<std::string>("-h", tokens);
@@ -81,7 +81,7 @@ bool CLParser::parse(const std::string &line) const {
 				continue;
 			}
 			int pos = loc - tokens.cbegin(); // A value must be defined next to this option keyword
-			if (tokens.size() < pos) {
+			if (tokens.size() <= pos + 1) {
 				std::cout << "Option [" << arg->getOption() << " | " << arg->getLongOption()
 						<< "] has no value defined!\n";
 				return false;
@@ -100,8 +100,7 @@ bool CLParser::parse(const std::string &line) const {
 			// Check that the value is of option expected type
 			if (!fillOption(value, arg)) {
 				std::cout << "Option [" << arg->getOption() << " | " << arg->getLongOption() << "] with value " << value
-						<< " has no correct type defined!\n";
-				std::cout << "Expected type : " << CLTYPEtoStr[arg->getType()] << "\n";
+						<< " has no correct type defined!\nExpected type : " << CLTYPEtoStr[arg->getType()] << "\n";
 				return false;
 			}
 		}
